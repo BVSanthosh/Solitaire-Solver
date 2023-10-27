@@ -2,7 +2,6 @@
 
 from game_state import GameState
 from solver import Solver
-import screen_capture
 
 def main():
     print("Pyramid Solver starting...")

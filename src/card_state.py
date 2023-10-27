@@ -3,21 +3,9 @@
 class CardState:
     def __init__(self, card):
         self.card = card
-        self.card_num = self.get_card_num()
-        self.card_suit = self.get_card_suit()
-        self.playable = False
-        
-    def get_card_num(self):
-        if len(self.card) == 2:
-            return int(self.card[0])
-        else:
-            return int(self.card[0:2])
-            
-    def get_card_suit(self):
-        return self.card[:0]
+        self.card_num = int(self.card[:-1])
+        self.card_suit = self.card[-1]
+        self.playable = 2
     
-    def set_playale(self, playable):
-        self.is_playale = playable
-    
-    def get_playale(self):
-        return self.playable
+    def set_playable(self, flag):
+        self.playable = flag

@@ -2,67 +2,58 @@
 
 from card_state import CardState
 
+MAX_ROWS = 7
+DECK_SIZE = 24
+
 class GameState:
     def __init__(self, pyramid, deck):
-        self.pyramid = [[None for _ in range(7 - row)] for row in range(7)]
-        self.deck = [None for _ in range(25)]
+        self.pyramid = [[None for _ in range(MAX_ROWS - row)] for row in range(MAX_ROWS)]
+        self.deck = [None] * DECK_SIZE
+        self.current_card_in_deck = 0
+        self.cards_in_pyramid = 0
+        self.valid_moves_in_pyramid = []
+        self.valid_moves_in_deck = []
+        self.valid_moves_between = []
         
-        for row in range(7):
-            for col in range(7 - row):
+        self.initialise_pyramid(pyramid)
+        self.initialise_deck(deck)
+        self.count_cards_in_pyramid()
+        self.get_valid_moves_in_pyramid()
+        self.get_valid_moves_in_deck()
+        self.get_valid_moves_between()
+    
+    def initialise_pyramid(self, pyramid):
+        for row in range(MAX_ROWS):
+            for col in range(MAX_ROWS - row):
                 self.pyramid[row][col] = CardState(pyramid[row][col])
                 if row == 0:
-                    self.pyramid[row][col].set_playable(True)
-            
-        for index in range(24):
+                    self.pyramid[row][col].set_playable(1)
+    
+    def initialise_deck(self, deck):
+        for index in range(DECK_SIZE):
             self.deck[index] = CardState(deck[index])
-            self.deck[index].set_playable(True)
-            
-        self.cards_in_deck = self.count_cards_in_deck()
-        self.cards_in_pyramid = self.count_cards_in_deck()
-        self.valid_moves_in_pyramid = self.get_valid_moves_in_pyramid() 
-        self.valid_moves_in_deck = self.get_valid_moves_in_deck()
-        self.valid_moves_between = self.get_valid_moves_between
+            self.deck[index].set_playable(1)
     
     def is_game_over(self):
-        if not self.cards_in_pyramid == 0:
-            return True
-        else:
-            return False 
+        return self.cards_in_pyramid == 0 
     
     def has_moves(self):
-        if not self.valid_moves_in_pyramid() or not self.valid_moves_in_deck() or not self.valid_moves_between() :
-            return False
-        else:
-            return True
+        return self.valid_moves_in_pyramid() and self.valid_moves_in_deck() and self.valid_moves_between()
         
     def count_cards_in_pyramid(self):
-        pyramid_count = 0
-        for row in range(7):
-            for col in range(7 - row):
-                if self.pyramid[row][col].get_playable == True:
-                    pyramid_count +=1
+        self.pyramid_count = sum(1 for row in self.pyramid for card in row if card.playable > 0)
     
-        return pyramid_count
-    
-    def count_cards_in_deck(self):
-        deck_count = 0
-        for cards in self.deck:
-            if cards.get_playable == True:
-                deck_count +=1
-                
-        return deck_count
+    def next_card_in_deck(self):
+        self.current_card_in_deck = (self.current_card_in_deck + 1) % 24
     
     def get_valid_moves_in_pyramid(self):
         
-        return self.valid_moves_in_pyramid
 
     def get_valid_moves_in_deck(self):
         
-        return self.valid_moves_in_deck
     
     def get_valid_moves_between(self):
         
-        return self.valid_moves_between
     
     def make_move(self):
         
