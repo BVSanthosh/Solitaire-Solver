@@ -6,22 +6,30 @@ class Solver:
     def __init__(self, state, moves_made):
         self.current_path = [(state, moves_made)]
         self.visited_states = set()
+        self.solved_state = False
 
     def search_move(self):
         popped_item = self.current_path.pop() 
+        popped_item[0].update_valid_moves()
+        
+        popped_item[0].print_game_state() 
         
         if popped_item[0].is_game_over():
-            print("Game won!")
+            self.solved_state = True
         elif popped_item[0].has_moves() and popped_item[0] not in self.visited_states:
             self.visited_states.add(popped_item[0])
             self.current_path.extend(self.get_child_states(popped_item))
-            print("Entering node:" + str(popped_item[0]))
+            print("\nEntering node:" + str(popped_item[0]) + "\n")
         else:
             print("Backtracking from node: " + str(popped_item[0]) )
         
     def get_child_states(self, state):
+        reversed_pyramid_moves = list(reversed(state[0].valid_moves_in_pyramid))
+        reversed_between_moves = list(reversed(state[0].valid_moves_between))
+        reversed_deck_moves = list(reversed(state[0].valid_moves_in_deck))
+        
+        moves_list = reversed_deck_moves + reversed_between_moves + reversed_pyramid_moves
         next_states = []
-        moves_list = state[0].get_valid_moves_in_deck() + state[0].get_valid_moves_between() + state[0].get_valid_moves_in_pyramid()
         
         for move in moves_list:
             next_state = copy.deepcopy(state[0])

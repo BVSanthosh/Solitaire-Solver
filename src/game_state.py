@@ -9,15 +9,16 @@ class GameState:
     def __init__(self, pyramid, deck):
         self.pyramid = [[None for _ in range(MAX_ROWS - row)] for row in range(MAX_ROWS)]
         self.deck = [None] * DECK_SIZE
+        self.valid_moves_in_pyramid = []
+        self.valid_moves_between = []
+        self.valid_moves_in_deck = []
         self.current_card_in_deck = 0
         self.cards_in_pyramid = 0
         
         self.initialise_pyramid(pyramid)
         self.initialise_deck(deck)
         self.count_cards_in_pyramid()
-        self.valid_moves_in_pyramid = self.get_valid_moves_in_pyramid()
-        self.valid_moves_between = self.get_valid_moves_between()
-        self.valid_moves_in_deck = self.get_valid_moves_in_deck()
+        
     
     def initialise_pyramid(self, pyramid):
         for i in range(MAX_ROWS):
@@ -35,7 +36,7 @@ class GameState:
         return self.cards_in_pyramid == 0 
     
     def has_moves(self):
-        return bool(self.valid_moves_in_pyramid) and bool(self.valid_moves_in_deck) and bool(self.valid_moves_between)
+        return bool(self.valid_moves_in_pyramid) or bool(self.valid_moves_in_deck) or bool(self.valid_moves_between)
         
     def count_cards_in_pyramid(self):
         self.cards_in_pyramid = sum(card.playable != 0 for row in self.pyramid for card in row)
@@ -44,7 +45,7 @@ class GameState:
         self.current_card_in_deck = (self.current_card_in_deck + 1) % 24
     
     def get_valid_moves_in_pyramid(self):
-        valid_moves_in_pyramid = []
+        self.valid_moves_in_pyramid = []
         playable_cards = self.get_playable_cards()
 
         for i in range(len(playable_cards)):
@@ -52,7 +53,7 @@ class GameState:
             card1 = self.pyramid[index1[0]][index1[1]]  
             
             if card1.card_num == 13:
-                valid_moves_in_pyramid.append([index1])
+                self.valid_moves_in_pyramid.append([index1])
                 continue
                 
             for j in range(i+1, len(playable_cards)):
@@ -60,43 +61,38 @@ class GameState:
                 card2 = self.pyramid[index2[0]][index2[1]]
                 
                 if card1.card_num + card2.card_num == 13:
-                    valid_moves_in_pyramid.append([index1, index2])
-                
-        return valid_moves_in_pyramid
+                    self.valid_moves_in_pyramid.append([index1, index2])
                     
     def get_valid_moves_between(self):
-        valid_moves_between = []
+        self.valid_moves_between = []
         playable_cards = self.get_playable_cards()
-        
-        for i in range(len(self.deck)):
-            for j in range(len(playable_cards)):
-                index = playable_cards[j]
-                
-                card1 = self.pyramid[index[0]][index[1]] 
-                card2 = self.deck[i]
-                
-                if card1.card_num + card2.card_num == 13:
-                    valid_moves_between.append([(-1, i), index])
-                    
-        return valid_moves_between
-
-    def get_valid_moves_in_deck(self):
-        valid_moves_in_deck = []
         
         for i in range(len(self.deck)):
             card1 = self.deck[i]
             
             if card1.card_num == 13:
-                valid_moves_in_deck.append([(-1, i)])
+                self.valid_moves_between.append([(-1, i)])
                 continue
             
-            for j in range(i+1, len(self.deck)):
-                card2 = self.deck[j]
+            for j in range(len(playable_cards)):
+                index = playable_cards[j]
+                card2 = self.pyramid[index[0]][index[1]] 
                 
-                if card1.card_num + card2.card_num == 13:
-                    valid_moves_in_deck.append([(-1, i), (-1, j)])
-                    
-        return valid_moves_in_deck
+                if card2.card_num + card1.card_num == 13:
+                    self.valid_moves_between.append([(-1, i), index])
+
+    def get_valid_moves_in_deck(self):
+        self.valid_moves_in_deck = []
+        
+        for i in range(len(self.deck)):
+            if self.deck[i].playable == 1:
+                for j in range(i+1, len(self.deck)):
+                    if self.deck[j].playable == 1:
+                        card1 = self.deck[i]
+                        card2 = self.deck[j]
+                        
+                        if card1.card_num + card2.card_num == 13:
+                            self.valid_moves_in_deck.append([(-1, i), (-1, j)])
                 
     def get_playable_cards(self):
         playable_cards = []
@@ -107,27 +103,51 @@ class GameState:
                     playable_cards.append((row, col))
                     
         return playable_cards
+    
+    def update_valid_moves(self):
+        self.get_valid_moves_in_pyramid()
+        self.get_valid_moves_between()
+        self.get_valid_moves_in_deck()
         
     def make_move(self, move):
-        card1_index1, card1_index2 = move[0]
-        card2_index1, card2_index2 = move[1]
         
-        if card1_index1 == -1 and card2_index1 == -1:
-            self.deck[card1_index2].set_playable(0)
-            self.deck[card2_index2].set_playable(0)
-            self.count_cards_in_pyramid()
-        elif card1_index1 == -1:
-            self.deck[card1_index2].set_playable(0)
-            self.pyramid[card2_index1][card2_index2].set_playable(0)
-            self.count_cards_in_pyramid()
+        if len(move) == 1:
+            card1_index1, card1_index2 = move[0]
+            
+            if card1_index1 == -1:
+                self.deck[card1_index2].set_playable(0)
+                self.count_cards_in_pyramid()
+            else:
+                self.pyramid[card1_index1][card1_index2].set_playable(0)
+                self.count_cards_in_pyramid()
         else:
-            self.pyramid[card1_index1][card1_index2].set_playable(0)
-            self.pyramid[card2_index1][card2_index2].set_playable(0)
-            self.count_cards_in_pyramid()
+            card1_index1, card1_index2 = move[0]
+            card2_index1, card2_index2 = move[1]
+            
+            if card1_index1 == -1 and card2_index1 == -1:
+                self.deck[card1_index2].set_playable(0)
+                self.deck[card2_index2].set_playable(0)
+                self.count_cards_in_pyramid()
+            elif card1_index1 == -1:
+                self.deck[card1_index2].set_playable(0)
+                self.pyramid[card2_index1][card2_index2].set_playable(0)
+                self.count_cards_in_pyramid()
+            else:
+                self.pyramid[card1_index1][card1_index2].set_playable(0)
+                self.pyramid[card2_index1][card2_index2].set_playable(0)
+                self.count_cards_in_pyramid()
+                
+        self.update_pyramid()
+        
+    def update_pyramid(self):
+        for row in range(MAX_ROWS - 1):
+            for col in range(MAX_ROWS - row - 1):
+                if self.pyramid[row][col].playable == 0 and self.pyramid[row][col+1].playable == 0 and self.pyramid[row + 1][col].playable == 2:
+                    self.pyramid[row + 1][col].playable = 1
     
     def print_game_state(self):
         print("\nPyramid State:")
-        for row in self.pyramid:
+        for row in reversed(self.pyramid):
             row_cards = []
             for card in row:
                 if card: 
