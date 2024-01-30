@@ -18,7 +18,6 @@ class GameState:
         self.initialise_pyramid(pyramid)
         self.initialise_deck(deck)
         self.count_cards_in_pyramid()
-        
     
     def initialise_pyramid(self, pyramid):
         for i in range(MAX_ROWS):
@@ -36,13 +35,16 @@ class GameState:
         return self.cards_in_pyramid == 0 
     
     def has_moves(self):
-        return bool(self.valid_moves_in_pyramid) or bool(self.valid_moves_in_deck) or bool(self.valid_moves_between)
+        return bool(self.valid_moves_in_pyramid) or bool(self.valid_moves_between)
         
     def count_cards_in_pyramid(self):
         self.cards_in_pyramid = sum(card.playable != 0 for row in self.pyramid for card in row)
     
     def next_card_in_deck(self):
-        self.current_card_in_deck = (self.current_card_in_deck + 1) % 24
+        self.current_card_in_deck += 1
+        
+        if self.current_card_in_deck == DECK_SIZE:
+            self.current_card_in_deck = 0
     
     def get_valid_moves_in_pyramid(self):
         self.valid_moves_in_pyramid = []
@@ -70,6 +72,9 @@ class GameState:
         for i in range(len(self.deck)):
             card1 = self.deck[i]
             
+            if card1.playable == 0:
+                continue
+            
             if card1.card_num == 13:
                 self.valid_moves_between.append([(-1, i)])
                 continue
@@ -82,17 +87,23 @@ class GameState:
                     self.valid_moves_between.append([(-1, i), index])
 
     def get_valid_moves_in_deck(self):
+        playable_cards = []
         self.valid_moves_in_deck = []
         
-        for i in range(len(self.deck)):
-            if self.deck[i].playable == 1:
-                for j in range(i+1, len(self.deck)):
-                    if self.deck[j].playable == 1:
-                        card1 = self.deck[i]
-                        card2 = self.deck[j]
-                        
-                        if card1.card_num + card2.card_num == 13:
-                            self.valid_moves_in_deck.append([(-1, i), (-1, j)])
+        for index in range(DECK_SIZE):
+            if self.deck[index].playable == 1:
+                playable_cards.append((index))
+                    
+        for i in range(len(playable_cards) - 1):
+            card1_index = playable_cards[i]
+            card2_index = playable_cards[i + 1]
+            
+            card1 = self.deck[card1_index]
+            card2 = self.deck[card2_index]
+            if card1.card_num + card2.card_num == 13:
+                self.valid_moves_in_deck.append([(-1, card1_index), (-1, card2_index)])
+            else:
+                continue
                 
     def get_playable_cards(self):
         playable_cards = []
@@ -110,7 +121,6 @@ class GameState:
         self.get_valid_moves_in_deck()
         
     def make_move(self, move):
-        
         if len(move) == 1:
             card1_index1, card1_index2 = move[0]
             
@@ -180,3 +190,36 @@ class GameState:
         print(f"\nCurrent card in deck index: {self.current_card_in_deck}")
         print("\nIs game over? ", self.is_game_over())
         print("Are there any moves left? ", self.has_moves())
+    
+    def __eq__(self, other):
+        if not isinstance(other, GameState):
+            return False
+        
+        for row_self, row_other in zip(self.pyramid, other.pyramid):
+            for card_self, card_other in zip(row_self, row_other):
+                if card_self != card_other:
+                    return False
+            
+        for card_self, card_other in zip(self.deck, other.deck):
+            if card_self != card_other:
+                return False
+            
+        if self.valid_moves_in_pyramid != other.valid_moves_in_pyramid:
+            return False
+
+        if self.valid_moves_between != other.valid_moves_between:
+            return False
+
+        if self.valid_moves_in_deck != other.valid_moves_in_deck:
+            return False
+            
+        return True
+    
+    def __hash__(self):
+        pyramid_hash = hash(tuple(tuple(row) for row in self.pyramid))
+        deck_hash = hash(tuple(self.deck))
+        moves_in_pyramid_hash = hash(tuple(tuple(move) for move in self.valid_moves_in_pyramid))
+        moves_in_deck_hash = hash(tuple(tuple(move) for move in self.valid_moves_in_deck))
+        moves_between_hash = hash(tuple(tuple(move) for move in self.valid_moves_between))
+
+        return hash((pyramid_hash, deck_hash, moves_in_pyramid_hash, moves_in_deck_hash, moves_between_hash))

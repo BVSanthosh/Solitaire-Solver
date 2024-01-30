@@ -1,6 +1,7 @@
 #Uses a search algorithm and a heuristic to calculate the best move to make
 
 import copy
+import time
 
 class Solver:
     def __init__(self, state, moves_made):
@@ -12,7 +13,9 @@ class Solver:
         popped_item = self.current_path.pop() 
         popped_item[0].update_valid_moves()
         
-        popped_item[0].print_game_state() 
+        popped_item[0].print_game_state()  
+        popped_item[0].print_game_info() 
+        print("\n Moves made:" + str(popped_item[1]))
         
         if popped_item[0].is_game_over():
             self.solved_state = True
@@ -23,6 +26,8 @@ class Solver:
         else:
             print("Backtracking from node: " + str(popped_item[0]) )
         
+        #time.sleep(2)
+    
     def get_child_states(self, state):
         reversed_pyramid_moves = list(reversed(state[0].valid_moves_in_pyramid))
         reversed_between_moves = list(reversed(state[0].valid_moves_between))
