@@ -9,3 +9,11 @@ class CardState:
     
     def set_playable(self, flag):
         self.playable = flag
+    
+    def __hash__(self):
+        return hash(self.card)
+
+    def __eq__(self, other):
+        if not isinstance(other, CardState):
+            return NotImplemented
+        return self.card == other.card

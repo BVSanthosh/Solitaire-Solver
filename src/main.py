@@ -1,32 +1,60 @@
-#Main loop of the game
+import sys
+import json
+import os
+import sys
 
 from game_state import GameState
 from solver import Solver
+from screen_interaction import scan_window, execute_moves
 
 def main():
-    game_instance = GameState([
-    ["11H", "4H", "9H", "11C", "7D", "9D", "13D"],
-    ["5H", "13C", "3C", "10S", "13H", "7S"],
-    ["1S", "8H", "12D", "8C", "13H"],
-    ["1H", "7H", "8S", "10H"],
-    ["1C", "9C", "5S"],
-    ["6D", "10D"],
-    ["3D"]
-    ], ["9S", "6C", "3S", "4S", "11S", "4C", "5D", "1H",
-    "2H", "11D", "6H", "12C", "7C", "12S", "2D", "5C",
-    "6S", "4D", "3H", "2C", "10C", "8D", "13S", "2S"])
+    initial_state = None
+    initial_state_file = "game_state/initial_state.json"
+
+    print("Scanning game window...")
+    scan_window()
     
-    solver_instance = Solver(game_instance, [])
+    initial_state = load_initial_state(initial_state_file)
     
+    if not initial_state:
+        print("Error: Initial game state not found. Please try again.")
+        sys.exit(1)
+        
+    print("\nInitial game state obtained. Searching for solution...")  
+    game_instance = GameState(initial_state["pyramid"], initial_state["deck"])
+    solver_instance = Solver(game_instance)
+     
     while  True:
         solver_instance.search_move()
     
         if solver_instance.solved_state:
-            print("Game won!")
+            print("\nSolution found!")
             break
         elif len(solver_instance.current_path) == 0:
-            print("Game cannot be won")
+            print("\nSolution not found.")
             break
+    
+    solution_moves = solver_instance.solution
+
+    print("\nExecuting moves...")
+    execute_moves(solution_moves)
+    
+def load_initial_state(initial_state_file):
+    if os.path.exists(initial_state_file) and os.path.getsize(initial_state_file) > 0:
+        try:
+            with open(initial_state_file, 'r') as file:
+                initial_state = json.load(file) 
+                
+            if not initial_state:  
+                print("Error: The JSON file is empty.")
+                return None
+            
+            return initial_state
+        except json.JSONDecodeError:
+            print("Error decoding JSON file. Please check the file format.")
+            return None
+    else:
+        return None
     
 if __name__ == "__main__":
     main()

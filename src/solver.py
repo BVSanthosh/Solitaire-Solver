@@ -4,41 +4,69 @@ import copy
 import time
 
 class Solver:
-    def __init__(self, state, moves_made):
-        self.current_path = [(state, moves_made)]
+    game_state_id = 0
+    
+    def __init__(self, state):
+        self.current_path = [state]
         self.visited_states = set()
         self.solved_state = False
+        self.solution = []
+        self.nodes_visited = 0
+        self.start_time = time.time()
 
     def search_move(self):
         popped_item = self.current_path.pop() 
-        popped_item[0].update_valid_moves()
+        popped_item.update_valid_moves()
+        popped_item.update_cards_freed_map()
+        popped_item.print_game_state()  
         
-        popped_item[0].print_game_state()  
-        popped_item[0].print_game_info() 
-        print("\n Moves made:" + str(popped_item[1]))
-        
-        if popped_item[0].is_game_over():
+        self.nodes_visited += 1
+    
+        if popped_item.is_game_over():
+            moves_made = popped_item.get_moves_made()
+            self.solution = popped_item.get_moves_string(moves_made)
             self.solved_state = True
-        elif popped_item[0].has_moves() and popped_item[0] not in self.visited_states:
-            self.visited_states.add(popped_item[0])
+            self.print_statistics()
+        elif popped_item.has_moves() and popped_item not in self.visited_states:
+            print("\nEntering node: " + popped_item.id + "\n")
+            self.visited_states.add(popped_item)
             self.current_path.extend(self.get_child_states(popped_item))
-            print("\nEntering node:" + str(popped_item[0]) + "\n")
         else:
-            print("Backtracking from node: " + str(popped_item[0]) )
-        
-        #time.sleep(2)
+            print("\nBacktracking from node: " +  popped_item.id + "\n")
+            if len(self.current_path) == 0:
+                moves_made = popped_item.get_moves_made()
+                self.solution = popped_item.get_moves_string(moves_made) 
     
     def get_child_states(self, state):
-        reversed_pyramid_moves = list(reversed(state[0].valid_moves_in_pyramid))
-        reversed_between_moves = list(reversed(state[0].valid_moves_between))
-        reversed_deck_moves = list(reversed(state[0].valid_moves_in_deck))
-        
-        moves_list = reversed_deck_moves + reversed_between_moves + reversed_pyramid_moves
+        moves_list = self.implement_heuristic(state)
         next_states = []
         
         for move in moves_list:
-            next_state = copy.deepcopy(state[0])
+            next_state = copy.deepcopy(state)
+            Solver.game_state_id += 1
+            next_state.update_state_id(Solver.game_state_id)
             next_state.make_move(move)
-            next_states.append((next_state, state[1] + [move]))
+            next_state.update_moves_made(move)
+            next_state.clear_cards_freed_map()
+            next_states.append(next_state)
             
         return next_states
+
+    def implement_heuristic(self, state):
+        reordered_pyramid_moves = self.reorder_pyramid_moves(state.valid_moves_in_pyramid, state.freed_cards_map)
+        reordered_between_moves = self.reorder_pyramid_moves(state.valid_moves_between, state.freed_cards_map)
+        moves_list = state.valid_moves_in_deck + reordered_between_moves + reordered_pyramid_moves + state.king_moves
+        
+        return moves_list
+    
+    def reorder_pyramid_moves(self, moves_list, freed_cards_map):
+        moves_list.sort(key=lambda move: len(freed_cards_map[move]))
+        
+        return moves_list
+    
+    def print_statistics(self):
+        end_time = time.time()
+        time_taken = end_time - self.start_time
+        
+        print(f"\nNumber of nodes visited: {self.nodes_visited}")
+        print(f"Time taken to solve: {time_taken} seconds")
