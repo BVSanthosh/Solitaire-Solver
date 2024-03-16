@@ -1,5 +1,3 @@
-#Internal representation of the state of each card
-
 class CardState:
     def __init__(self, card):
         self.card = card

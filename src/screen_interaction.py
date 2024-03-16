@@ -33,17 +33,20 @@ def scan_window():
         solitaire_window.moveTo(0, 0)
         solitaire_window.resizeTo(WINDOW_HEIGHT, WINDOW_WIDTH)
         
-        read_cards()
+        return True
     except IndexError:
         print("Window not found.")
+        return False
     except Exception as e:
         print(f"An error occurred: {e}")
+        return False
     
-def read_cards():
+def read_cards(scan_card_callback):
     global img_to_card_map_data, deck_button_region, deck_region, waste_region, pyramid_region_map_list
     pyramid_cards = [None for _ in range(NUM_OF_PYRAMID_CARDS)]
     deck_cards = [None for _ in range(NUM_OF_DECK_CARDS)]
     region_data = {}
+    card_int = 0
     
     with open('resources/regions.json', 'r') as file:
         region_data = json.load(file)
@@ -66,9 +69,13 @@ def read_cards():
     for index, region in enumerate(pyramid_region_map_list):
         card_region = (region['x'], region['y'], region['width'], region['height'])
         pyramid_cards[index] = scan_region_for_card(card_region, img_to_card_map)
+        scan_card_callback(card_int, pyramid_cards[index])
+        card_int += 1
 
     for i in range(NUM_OF_DECK_CARDS):
         deck_cards[i] = scan_region_for_card(deck_region, img_to_card_map)
+        scan_card_callback(card_int, deck_cards[i])
+        card_int += 1
         pyautogui.click(deck_button_region)
 
     pyautogui.click(undo_button_region)
@@ -134,6 +141,7 @@ def verify_cards(pyramid, deck):
     
     window = tk.Tk()
     window.title("Verification Window")
+    window.attributes("-topmost", True)
     message_label = tk.Label(window, text="Please verify that the cards below match the cards in the game window:")
     message_label.pack()
     
@@ -211,11 +219,14 @@ def create_initial_game_state():
     with open('game_state/initial_state.json', 'w') as file:
         json.dump(game_state, file, indent=4)
             
-def execute_moves(moves):
+def execute_moves(moves, highlight_cards_callback):
     global card_to_region_map, verified_deck, verified_pyramid
-    
+
     for move in moves:
-        print(f"Executing move: {move}")
+        if len(move) == 1:
+            print(f"Click on: {move[0]}")
+        else:
+            print(f"Click on: {move[0]}, {move[1]}")
         
         if len(move) == 1:
             loc1 = card_to_region_map[move[0]]
@@ -242,6 +253,8 @@ def execute_moves(moves):
             else:
                 pyautogui.click(reg2)
                 time.sleep(0.5)
+                
+        highlight_cards_callback(move)
             
 def check_deck(card):
     global pos_in_deck, verified_deck, deck_button_region, deck_region, waste_region
@@ -277,6 +290,7 @@ def check_deck(card):
                 time.sleep(0.5)
                 
         if (card_not_found):
+            print("Draw")
             pyautogui.click(deck_button_region)
             time.sleep(0.5)
             pos_in_deck += 1

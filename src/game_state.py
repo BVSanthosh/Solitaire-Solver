@@ -1,5 +1,3 @@
-#Internal representation of the game state
-
 from card_state import CardState
 
 MAX_ROWS = 7
@@ -440,30 +438,49 @@ class GameState:
     
     def print_game_state(self):
         print("\nPyramid:")
-        for row in reversed(self.pyramid):
+        for i, row in enumerate(reversed(self.pyramid)):
+            leading_spaces = "   " * (7 - i)
             row_cards = []
-            for card in row:
-                if card: 
+            for j, card in enumerate(row):
+                if card:
                     card_info = f"{card.card_num}{card.card_suit} ({card.playable})"
                     row_cards.append(card_info)
-            print(" ".join(row_cards))
+                else:
+                    row_cards.append("       ") 
+
+            print(f"{leading_spaces} {' '.join(row_cards)}")
 
         print("\nDeck:")
         deck_cards = []
+        i = 0
         for card in self.deck:
-            if card: 
+            if card == self.current_deck_card: 
+                card_info = f"[{card.card_num}{card.card_suit} ({card.playable})]"
+                deck_cards.append(card_info)
+            else:
                 card_info = f"{card.card_num}{card.card_suit} ({card.playable})"
                 deck_cards.append(card_info)
+                
+            if i == len(self.deck) / 2:
+                deck_cards.append("   ")
         print(" ".join(deck_cards))
         
         print(f"\nCards in Pyramid: {self.cards_in_pyramid}")
-        print(f"Current card in deck pile: {self.current_deck_pos}")
-        print(f"Current card in waste pile: {self.current_waste_pos}")
+        print(f"Cards in deck: {self.current_deck_pos + 1}")
+        print(f"Current card in deck pile: {self.deck[self.current_deck_pos].card}")
+        
+        if self.current_waste_pos != -1:
+            print(f"Cards in waste pile: {self.current_waste_pos + 1}")
+            print(f"Current card in waste pile: {self.deck[self.current_waste_pos].card}")
+        else:
+            print(f"Cards in waste pile: {0}")
+            print(f"Current card in waste pile: {0}")
+            
         print(f"Deck round(s): {self.deck_rounds}")
         print("Is game over? ", self.is_game_over())
         print("Are there any moves left? ", self.has_moves())
         
-        print("\nValid moves:")
+        print("\nAvailable moves:")
         moves_list = self.get_moves_string(self.king_moves) + self.get_moves_string(self.valid_moves_in_pyramid) + self.get_moves_string(self.valid_moves_between) + self.get_moves_string(self.valid_moves_in_deck)
         print(moves_list)
         
@@ -477,5 +494,4 @@ class GameState:
     def __eq__(self, other):
         if not isinstance(other, GameState):
             return False
-        
         return self.id == other.id
