@@ -9,6 +9,14 @@ from game_state import GameState
 from tree_traversal import DFS
 from screen_interaction import scan_window, read_cards, execute_moves
 
+"""
+This module contains the SolverWindow class, which is used to create the GUI for the Pyramid Solitaire solver.
+
+This file isn't intended to be part of the final submission but can still be run to test the GUI. Instructions on how to run the GUI are provided in the README.md file.
+
+The code for the GUI has been written with the help of ChatGPT.
+"""
+
 class SolverWindow:
     initial_state = None
         
@@ -54,6 +62,7 @@ class SolverWindow:
         
         self.button_frame.pack(side=tk.BOTTOM, pady=10) 
         
+    # Sets up the empty game display
     def setup_empty_game(self):
         key_int = 0
         tk.Frame(self.root, height=40).pack()
@@ -87,12 +96,19 @@ class SolverWindow:
                 key_int += 1
                 
         tk.Frame(self.root, height=30).pack()
-        
+    
+    # Resets the game display
+    def reset_display(self):
+        for label in self.pyramid_cards.values():
+            label.config(text="")
+    
+    # Updates the game display with the card text
     def update_game_display(self, card_id, card_text):
         card_label = self.pyramid_cards[card_id]
         card_label.config(text=card_text)
         self.root.update_idletasks()
         
+    # Updates the textbox status message
     def update_status(self, message):
         self.status_text.config(state='normal')
         self.status_text.delete(1.0, tk.END)
@@ -100,7 +116,8 @@ class SolverWindow:
         self.status_text.insert(tk.END, message)
         self.status_text.tag_add('center', 1.0, "end")
         self.status_text.config(state='disabled')
-        
+    
+    # Adds a hover effect to the label widget
     def hover_effect(self, label_widget, on_enter_color, on_leave_color):
         def on_enter(event):
             label_widget.config(background=on_enter_color)
@@ -110,31 +127,24 @@ class SolverWindow:
 
         label_widget.bind("<Enter>", on_enter)
         label_widget.bind("<Leave>", on_leave)
-        
-    def highlight_cards(self, move):
-        if len(move) == 1:
-            card1_label = self.find_label(move[0])
-            
-            if card1_label:
-                highlight_color = "silver"
-                card1_label.config(background=highlight_color)
-                self.root.update_idletasks()
-        else:
-            card1_label = self.find_label(move[0])
-            card2_label = self.find_label(move[1])
-            
-            if card1_label and card2_label:
-                highlight_color = "silver"
-                card1_label.config(background=highlight_color)
-                card2_label.config(background=highlight_color)
-                self.root.update_idletasks()
     
+    # Highlights the card labels
+    def highlight_cards(self, card):
+        card_label = self.find_label(card)
+        
+        if card_label:
+            highlight_color = "silver"
+            card_label.config(background=highlight_color)
+            self.root.update_idletasks()
+    
+    # Finds the label widget with the card text
     def find_label(self, card_text):
         for key, label in self.pyramid_cards.items():
             if label["text"] == card_text:
                 return label
         return None
-        
+    
+    # Checks the update queue for new commands
     def check_queue(self):
         try:
             while True:
@@ -143,7 +153,8 @@ class SolverWindow:
         except queue.Empty:
             pass
         self.root.after(100, self.check_queue)
-        
+    
+    # Function to scan the game window and loads the initial game state when "Scan Window" button is clicked
     def scan(self):
         def scan_card_callback(card_id, card_text):
             self.update_queue.put(lambda: self.update_game_display(card_id, card_text))
@@ -185,10 +196,11 @@ class SolverWindow:
             
             self.update_queue.put(on_scan_complete)
             
+        self.scan_button['state'] = 'disabled'
+        self.reset_display()
+            
         with open("game_state/initial_state.json", "w") as file:
             json.dump({}, file)
-        
-        self.scan_button['state'] = 'disabled'
         
         print("\nScanning game window...")
         self.update_status("Scanning game window...")
@@ -196,12 +208,13 @@ class SolverWindow:
         scanning_thread = threading.Thread(target=scan_and_load)
         scanning_thread.start()
     
+    # Function to solve the game when "Solve Game" button is clicked
     def solve(self): 
         global initial_state
         result_text = ""
         
-        def highlight_cards_callback(move):
-            self.update_queue.put(lambda: self.highlight_cards(move))
+        def highlight_cards_callback(card):
+            self.update_queue.put(lambda: self.highlight_cards(card))
             
         def output_stats():
             print("\nGame solved successfully!")
@@ -213,7 +226,7 @@ class SolverWindow:
             execute_moves(solution_moves, highlight_cards_callback)
             self.update_queue.put(output_stats)
         
-        self.scan_button['state'] = 'disabled'
+        self.solve_button['state'] = 'disabled'
             
         game_instance = GameState(initial_state["pyramid"], initial_state["deck"])
         solver_instance = DFS(game_instance)
@@ -242,7 +255,8 @@ class SolverWindow:
             
         solving_thread = threading.Thread(target=solve_and_output_result)
         solving_thread.start()
-        
+    
+    # Loads the initial game state from the JSON file
     def load_initial_state(self, initial_state_file):
         if os.path.exists(initial_state_file) and os.path.getsize(initial_state_file) > 0:
             try:
@@ -259,15 +273,16 @@ class SolverWindow:
                 return None
         else:
             return None
-        
+    
+    # Termminates the program when the solver window is closed
     def on_close(self):
             self.root.destroy() 
             os._exit(0)
         
 def main():
-    root = tk.Tk()
-    app = SolverWindow(root)
-    root.mainloop()
+    root = tk.Tk()   # Creates the main window
+    app = SolverWindow(root)   # Creates the SolverWindow instance
+    root.mainloop()   # Runs the main event loop
     
 if __name__ == "__main__":
     main()

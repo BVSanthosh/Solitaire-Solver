@@ -5,27 +5,34 @@ import json
 import tkinter as tk
 from tkinter import messagebox
 
-NUM_OF_CARDS = 52
-NUM_OF_PYRAMID_CARDS = 28   
-NUM_OF_DECK_CARDS = 24
-PYRAMID_ROWS = 7
-WINDOW_HEIGHT = 1280
-WINDOW_WIDTH = 720
-WINDOW_NAME = "Solitaire & Casual Games"
+"""
+This module contains functions for scanning the game window and reading the cards.
 
-img_to_card_map_data = {}
-card_to_region_map = {}
-deck_button_region = ()
-deck_region = ()
-waste_region = ()
-pos_in_deck = 0
-pyramid_region_map_list = [None for _ in range(NUM_OF_PYRAMID_CARDS)]
-verified_pyramid = [None for _ in range(NUM_OF_PYRAMID_CARDS)]
-verified_deck = [None for _ in range(NUM_OF_DECK_CARDS)]
+The code for verify_cards() is written with the help of ChatGPT.
+"""
 
+NUM_OF_CARDS = 52   # Stores the total number of cards in the game
+NUM_OF_PYRAMID_CARDS = 28   # Stores the number of cards in the pyramid
+NUM_OF_DECK_CARDS = 24   # Stores the number of cards in the deck
+PYRAMID_ROWS = 7   # Stores the number of rows in the pyramid
+WINDOW_HEIGHT = 1280   # Stores the height of the game window
+WINDOW_WIDTH = 720   # Stores the width of the game window
+WINDOW_NAME = "Solitaire & Casual Games"   # Stores the name of the game window
+
+img_to_card_map_data = {}   # Maps the screenshot of the card to the card value
+card_to_region_map = {}  # Maps the card value to the region on the screen
+deck_button_region = ()   # Stores the region of the deck button
+deck_region = ()   # Stores the region of the stock
+waste_region = ()   # Stores the region of the waste pile
+pos_in_deck = 0   # Stores the position in the deck
+pyramid_region_map_list = [None for _ in range(NUM_OF_PYRAMID_CARDS)]   # Stores the regions of the pyramid cards
+verified_pyramid = [None for _ in range(NUM_OF_PYRAMID_CARDS)]   # Stores the verified pyramid cards
+verified_deck = [None for _ in range(NUM_OF_DECK_CARDS)]   # Stores the verified deck cards
+
+# Scans the game window for the Solitaire game
 def scan_window():
     try:
-        solitaire_window = gw.getWindowsWithTitle(WINDOW_NAME)[0] 
+        solitaire_window = gw.getWindowsWithTitle(WINDOW_NAME)[0]  
         
         if solitaire_window.isMinimized:
             solitaire_window.restore()
@@ -35,18 +42,18 @@ def scan_window():
         
         return True
     except IndexError:
-        print("Window not found.")
         return False
     except Exception as e:
         print(f"An error occurred: {e}")
         return False
-    
-def read_cards(scan_card_callback):
+
+# Reads the cards from the game window
+def read_cards():   #add scan_card_callback as a parameter when testing the GUI
     global img_to_card_map_data, deck_button_region, deck_region, waste_region, pyramid_region_map_list
     pyramid_cards = [None for _ in range(NUM_OF_PYRAMID_CARDS)]
     deck_cards = [None for _ in range(NUM_OF_DECK_CARDS)]
     region_data = {}
-    card_int = 0
+    #card_int = 0   <--- uncomment when testing the GUI
     
     with open('resources/regions.json', 'r') as file:
         region_data = json.load(file)
@@ -69,20 +76,22 @@ def read_cards(scan_card_callback):
     for index, region in enumerate(pyramid_region_map_list):
         card_region = (region['x'], region['y'], region['width'], region['height'])
         pyramid_cards[index] = scan_region_for_card(card_region, img_to_card_map)
-        scan_card_callback(card_int, pyramid_cards[index])
-        card_int += 1
+        #scan_card_callback(card_int, pyramid_cards[index])   <--- uncomment when testing the GUI
+        #card_int += 1   <--- uncomment when testing the GUI
 
     for i in range(NUM_OF_DECK_CARDS):
         deck_cards[i] = scan_region_for_card(deck_region, img_to_card_map)
-        scan_card_callback(card_int, deck_cards[i])
-        card_int += 1
+        #scan_card_callback(card_int, deck_cards[i])   <--- uncomment when testing the GUI
+        #card_int += 1   <--- uncomment when testing the GUI
         pyautogui.click(deck_button_region)
 
+    time.sleep(0.5)
     pyautogui.click(undo_button_region)
     verify_cards(pyramid_cards, deck_cards)
     initiate_maps(deck_region_map)
     create_initial_game_state()
-    
+
+# Scans a card region of the game window to recognize the card
 def scan_region_for_card(region, img_to_card_map):
     for card_index in range(NUM_OF_CARDS):
         try:
@@ -98,6 +107,7 @@ def scan_region_for_card(region, img_to_card_map):
     print(f'No card found in region {region}')
     return 0
 
+# Displays the verification window to verify the cards
 def verify_cards(pyramid, deck):
     VALID_CARDS = {
     "1C", "2C", "3C", "4C", "5C", "6C", "7C", "8C", "9C", "10C", "11C", "12C", "13C",
@@ -192,6 +202,7 @@ def verify_cards(pyramid, deck):
     tk.Button(window, text="Save", command=save).pack()
     window.mainloop()
 
+# Initializes the card to region map
 def initiate_maps(deck_region_map):
     global verified_pyramid, verified_deck, card_to_region_map, pyramid_region_map_list
     
@@ -200,7 +211,8 @@ def initiate_maps(deck_region_map):
         
     for index, card in enumerate(verified_deck):
         card_to_region_map[card] = deck_region_map
-    
+
+# Writes the initial state of the game to the initial game state JSON file
 def create_initial_game_state():
     global verified_pyramid, verified_deck
     pyramid_reshaped = [[None for _ in range(PYRAMID_ROWS - row)] for row in range(PYRAMID_ROWS)]
@@ -218,15 +230,19 @@ def create_initial_game_state():
     
     with open('game_state/initial_state.json', 'w') as file:
         json.dump(game_state, file, indent=4)
-            
-def execute_moves(moves, highlight_cards_callback):
-    global card_to_region_map, verified_deck, verified_pyramid
 
-    for move in moves:
+# Executes the moves on the game window
+def execute_moves(moves):   #add highlight_cards_callback as a parameter when testing the GUI
+    global card_to_region_map, verified_deck, verified_pyramid
+    
+    for move in moves:    
         if len(move) == 1:
             print(f"Click on: {move[0]}")
+            #highlight_cards_callback(move[0])   <--- uncomment when testing the GUI
         else:
             print(f"Click on: {move[0]}, {move[1]}")
+            #highlight_cards_callback(move[0])   <--- uncomment when testing the GUI
+            #highlight_cards_callback(move[1])   <--- uncomment when testing the GUI
         
         if len(move) == 1:
             loc1 = card_to_region_map[move[0]]
@@ -253,9 +269,8 @@ def execute_moves(moves, highlight_cards_callback):
             else:
                 pyautogui.click(reg2)
                 time.sleep(0.5)
-                
-        highlight_cards_callback(move)
-            
+
+# Checks for the card in the stock or waste pile to be clicked when executing moves
 def check_deck(card):
     global pos_in_deck, verified_deck, deck_button_region, deck_region, waste_region
     card_not_found = True
@@ -295,7 +310,8 @@ def check_deck(card):
             time.sleep(0.5)
             pos_in_deck += 1
             check_deck_pos()
-            
+
+# Checks that the position in the deck is within the bounds
 def check_deck_pos():
     global pos_in_deck, verified_deck,deck_button_region
     

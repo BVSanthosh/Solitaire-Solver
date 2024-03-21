@@ -7,9 +7,9 @@
     "configurations": [
         {
             "name": "Python: Main Entry",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/main.py",
+            "program": "${workspaceFolder}/src/solver_window.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }
